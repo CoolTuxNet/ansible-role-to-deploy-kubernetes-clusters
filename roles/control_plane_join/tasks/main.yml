@@ -1,0 +1,48 @@
+---
+- name: Check if control plane is already joined
+  stat:
+    path: /etc/kubernetes/admin.conf
+  register: k8s_admin_conf
+
+- name: Check if super-admin.conf exists and what type it is
+  stat:
+    path: /etc/kubernetes/super-admin.conf
+  register: super_admin_stat
+
+# Dieser Task wird nun unabhängig vom Join-Status ausgeführt,
+# sofern das blockierende Verzeichnis existiert.
+- name: Remove accidental super-admin.conf directory if it exists
+  file:
+    path: /etc/kubernetes/super-admin.conf
+    state: absent
+  when: super_admin_stat.stat.isdir | default(false)
+
+# Kopiert die Datei, falls sie fehlt oder zuvor ein Verzeichnis war
+- name: Copy super-admin.conf from Ansible controller to secondary control plane
+  copy:
+    src: /tmp/k8s-super-admin.conf
+    dest: /etc/kubernetes/super-admin.conf
+    owner: root
+    group: root
+    mode: "0600"
+  when: not super_admin_stat.stat.exists or super_admin_stat.stat.isdir | default(false)
+
+- name: Join additional control plane nodes to the cluster
+  command: "{{ hostvars['K8S_TOKEN_HOLDER']['cp_cmd'] }}"
+  when: not k8s_admin_conf.stat.exists
+
+- name: Ensure .kube directory exists for root user
+  file:
+    path: /root/.kube
+    state: directory
+    mode: "0755"
+
+- name: Copy admin.conf to root's kube config
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /root/.kube/config
+    remote_src: yes
+    owner: root
+    group: root
+    mode: "0600"
+  when: not k8s_admin_conf.stat.exists

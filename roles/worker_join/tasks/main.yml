@@ -1,0 +1,5 @@
+---
+- name: Join worker nodes to the cluster
+  command: "{{ hostvars['K8S_TOKEN_HOLDER']['worker_cmd'] }}"
+  args:
+    creates: /etc/kubernetes/kubelet.conf

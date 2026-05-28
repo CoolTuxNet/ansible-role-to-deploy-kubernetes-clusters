@@ -1,0 +1,196 @@
+---
+- name: Add containerd and kubernetes repositorys
+  tags:
+    - apt-repository
+  block:
+    - name: Check if Docker GPG key is already installed
+      stat:
+        path: /usr/share/keyrings/docker_public.gpg
+      register: docker_gpg_installed
+
+    - name: Add Docker GPG key for containerd
+      get_url:
+        url: https://download.docker.com/linux/debian/gpg
+        dest: /usr/share/keyrings/docker.asc
+        mode: "0644"
+
+    - name: kubernetes repo | download kubernetes gpg key for Debian
+      ansible.builtin.get_url:
+        url: https://pkgs.k8s.io/core:/stable:/v{{ k8s_major_version }}/deb/Release.key
+        dest: /usr/share/keyrings/k8s.asc
+        mode: "0644"
+
+    - name: Add docker repository into sources list
+      ansible.builtin.deb822_repository:
+        enabled: true
+        name: docker-{{ ansible_facts['distribution_release'] }}
+        types: deb
+        uris: https://download.docker.com/linux/debian
+        suites: "{{ ansible_facts['distribution_release'] }}"
+        components:
+          - stable
+        signed_by: /usr/share/keyrings/docker.asc
+
+    - name: Add kubernetes repository into sources list
+      ansible.builtin.deb822_repository:
+        enabled: true
+        name: kubernetes-{{ ansible_facts['distribution_release'] }}
+        types: deb
+        uris: https://pkgs.k8s.io/core:/stable:/v{{ k8s_major_version }}/deb
+        suites: "/"
+        signed_by: /usr/share/keyrings/k8s.asc
+
+    - name: Update apt packages
+      apt:
+        update_cache: true
+
+- name: Setup Prerequisites To Install Kubernetes
+  tags:
+    - setup-prerequisites
+  block:
+    - name: Disable swap immediately
+      command: swapoff -a
+      when: ansible_facts["swaptotal_mb"] > 0
+
+    - name: Disable swap permanently in /etc/fstab
+      replace:
+        path: /etc/fstab
+        regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
+        replace: '# \1'
+
+    - name: Load containerd kernel modules
+      modprobe:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - overlay
+        - br_netfilter
+
+    - name: Ensure kernel modules are loaded on boot
+      copy:
+        dest: /etc/modules-load.d/k8s.conf
+        content: |
+          overlay
+          br_netfilter
+
+    - name: Set sysctl parameters for Kubernetes networking
+      sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        state: present
+        sysctl_set: true
+        reload: true
+      loop:
+        - { name: "net.bridge.bridge-nf-call-iptables", value: "1" }
+        - { name: "net.bridge.bridge-nf-call-ip6tables", value: "1" }
+        - { name: "net.ipv4.ip_forward", value: "1" }
+
+    - name: Ensure sysctl parameters for Kubernetes networking are loaded on boot
+      copy:
+        dest: /etc/sysctl.d/90.k8s.conf
+        content: |
+          net.bridge.bridge-nf-call-iptables = 1
+          net.bridge.bridge-nf-call-ip6tables = 1
+          net.ipv4.ip_forward = 1
+
+    - name: 1. Setup a Container Runtime
+      ansible.builtin.apt:
+        name:
+          - containerd.io
+        state: present
+
+    - name: Ensure containerd config directory exists
+      file:
+        path: /etc/containerd
+        state: directory
+
+    - name: 4.1 Check config.toml Exists
+      ansible.builtin.stat:
+        path: /etc/containerd/config.toml
+      register: pre_file_exist_result
+
+    - name: 4.2 Delete config.toml Exists
+      ansible.builtin.file:
+        path: /etc/containerd/config.toml
+        state: absent
+      when: pre_file_exist_result.stat.exists
+
+    - name: Generate default containerd config
+      tags:
+        - containerd_config
+      command: containerd config default
+      register: containerd_config
+      changed_when: false
+
+    - name: Write containerd config and enable SystemdCgroup
+      copy:
+        content: "{{ containerd_config.stdout | replace('SystemdCgroup = false', 'SystemdCgroup = true') }}"
+        dest: /etc/containerd/config.toml
+      notify: restart containerd
+
+    - name: 5.2 Check If New config.toml Exists Now
+      ansible.builtin.stat:
+        path: /etc/containerd/config.toml
+      register: post_file_exist_result
+      tags:
+        - containerd_config
+
+    - name: 5.3 Exit The Play If config.toml Does Not Exist
+      ansible.builtin.meta: end_play
+      when: not post_file_exist_result.stat.exists
+      tags:
+        - containerd_config
+
+    - name: 10.1 Update Cache
+      ansible.builtin.apt:
+        update_cache: true
+        autoclean: true
+      tags:
+        - install_pre_kube_packages
+
+    - name: 10.2 Remove apt lock file
+      ansible.builtin.file:
+        state: absent
+        path: "/var/lib/dpkg/lock"
+      tags:
+        - install_pre_kube_packages
+
+    - name: 10.3 Install Prerequisite Packages
+      ansible.builtin.apt:
+        name: "{{ kube_prereq_packages }}"
+      tags:
+        - install_pre_kube_packages
+
+    - name: 11.1 Update Cache
+      ansible.builtin.apt:
+        update_cache: true
+        autoclean: true
+      tags:
+        - install_kube_packages
+
+    - name: 11.2 Remove apt lock file
+      ansible.builtin.file:
+        state: absent
+        path: "/var/lib/dpkg/lock"
+      tags:
+        - install_kube_packages
+
+    - name: 11.3 Install Required Packages
+      ansible.builtin.apt:
+        name: "{{ kube_packages | map('regex_replace', '$', '=' ~ k8s_version ~ '-1.1') | list }}"
+      tags:
+        - install_kube_packages
+
+    - name: 11.4 Hold Packages
+      ansible.builtin.dpkg_selections:
+        name: "{{ item }}"
+        selection: hold
+      with_items: "{{ kube_packages }}"
+      tags:
+        - install_kube_packages
+
+    - name: Ensure kubelet is started and enabled
+      service:
+        name: kubelet
+        state: started
+        enabled: true

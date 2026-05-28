@@ -1,0 +1,16 @@
+---
+- name: Ensure Kubernetes manifests directory exists
+  file:
+    path: /etc/kubernetes/manifests
+    state: directory
+    mode: "0755"
+    owner: root
+    group: root
+
+- name: Template kube-vip static pod manifest
+  template:
+    src: kube-vip.yml.j2
+    dest: /etc/kubernetes/manifests/kube-vip.yaml
+    owner: root
+    group: root
+    mode: "0600"

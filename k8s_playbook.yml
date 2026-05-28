@@ -1,0 +1,36 @@
+---
+- name: Prepare all nodes
+  hosts: k8s_cluster
+  become: true
+  roles:
+    - ../roles/k8s_common
+
+- name: Setup HA Virtual IP via Kube-VIP
+  hosts: control_planes
+  become: true
+  roles:
+    - ../roles/gkube_vip
+
+- name: Initialize the first control plane
+  hosts: control_planes[0]
+  become: true
+  roles:
+    - ../roles/control_plane_init
+
+- name: Join additional control planes
+  hosts: control_planes[1:]
+  become: true
+  roles:
+    - ../roles/control_plane_join
+
+- name: Join worker nodes
+  hosts: workers
+  become: true
+  roles:
+    - ../roles/worker_join
+
+- name: Install Calico CNI
+  hosts: control_planes[0]
+  become: true
+  roles:
+    - ../roles/calico_setup

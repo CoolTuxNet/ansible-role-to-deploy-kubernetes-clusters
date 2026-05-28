@@ -1,0 +1,37 @@
+---
+- name: Ensure python3-kubernetes is installed for the k8s module
+  apt:
+    name: python3-kubernetes
+    state: present
+    update_cache: true
+
+- name: Apply Tigera Operator for Calico
+  kubernetes.core.k8s:
+    state: present
+    src: https://raw.githubusercontent.com/projectcalico/calico/v{{ calico_version }}/manifests/tigera-operator.yaml
+    kubeconfig: /etc/kubernetes/admin.conf
+
+- name: Template Calico custom resources
+  template:
+    src: custom-resources.yml.j2
+    dest: /etc/kubernetes/calico-custom-resources.yml
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Apply Calico custom resources (Installation)
+  kubernetes.core.k8s:
+    state: present
+    src: /etc/kubernetes/calico-custom-resources.yml
+    kubeconfig: /etc/kubernetes/admin.conf
+
+- name: Wait for Calico API server to be ready
+  kubernetes.core.k8s_info:
+    kind: APIServer
+    api_version: operator.tigera.io/v1
+    name: default
+    kubeconfig: /etc/kubernetes/admin.conf
+  register: calico_api
+  retries: 12
+  delay: 10
+  until: calico_api.resources | length > 0
