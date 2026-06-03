@@ -1,0 +1,25 @@
+---
+apiVersion: "cilium.io/v2alpha1"
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: gateway-ippool
+  namespace: {{ cilium_namespace }}
+spec:
+  blocks:
+    - cidr: "{{ gateway_ippool_cdr }}"
+---
+apiVersion: "cilium.io/v2alpha1"
+kind: CiliumL2AnnouncementPolicy
+metadata:
+  name: l2-announcement-policy
+  namespace: {{ cilium_namespace }}
+spec:
+  nodeSelector:
+    matchExpressions:
+      - key: node-role.kubernetes.io/control-plane
+        operator: DoesNotExist
+  interfaces:
+    - ^ens[0-9]+
+    - ^eth[0-9]+
+  loadBalancerIPs: true
+  externalIPs: true

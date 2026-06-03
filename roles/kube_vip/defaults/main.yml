@@ -1,5 +1,5 @@
 ---
 # Kube-VIP HA Konfiguration
 kube_vip_version: "1.0.4"
-kube_vip_address: "192.168.0.90"
+# kube_vip_address: "10.6.8.210"
 kube_vip_interface: "eth0"

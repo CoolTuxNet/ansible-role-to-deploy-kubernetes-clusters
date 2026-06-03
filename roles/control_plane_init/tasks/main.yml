@@ -21,7 +21,11 @@
   when: not k8s_admin_conf.stat.exists
 
 - name: Initialize Kubernetes cluster
-  command: kubeadm init --config=/root/kubeadm-init.yml --upload-certs
+  command: >
+    kubeadm init 
+    --config=/root/kubeadm-init.yml 
+    --upload-certs 
+    {{ '--skip-phases=addon/kube-proxy' if k8s_cni == 'cilium' else '' }}
   register: kubeadm_init_output
   args:
     creates: /etc/kubernetes/admin.conf
