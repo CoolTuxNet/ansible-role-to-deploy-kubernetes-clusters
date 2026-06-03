@@ -1,5 +1,3 @@
-# ansible_environment: production
-# k8s_major_version: "1.35"
-# k8s_version: "1.35.3"
+---
 kube_prereq_packages: [curl, ca-certificates, apt-transport-https, python3-kubernetes, python3-yaml]
 kube_packages: [kubeadm, kubectl, kubelet]
