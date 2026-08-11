@@ -1,0 +1,98 @@
+---
+- name: Apply Gateway API CRDs Standard Channel
+  kubernetes.core.k8s:
+    state: present
+    src: https://github.com/kubernetes-sigs/gateway-api/releases/download/v{{ gateway_api_version }}/standard-install.yaml
+    kubeconfig: /etc/kubernetes/admin.conf
+
+# --- Helm Installation nach /usr/local/bin/ ---
+- name: Download official Helm installer script
+  get_url:
+    url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+    dest: /tmp/get-helm-3.sh
+    mode: "0755"
+
+- name: Run Helm installer script and enforce target directory
+  command: /tmp/get-helm-3.sh
+  environment:
+    HELM_INSTALL_DIR: /usr/local/bin
+  args:
+    creates: /usr/local/bin/helm
+
+# --- Cilium Deployment ---
+- name: Add Cilium Helm repository
+
+  kubernetes.core.helm_repository:
+    name: cilium
+    repo_url: https://helm.cilium.io/
+
+- name: Deploy Cilium via Helm with eBPF and Gateway API features
+  kubernetes.core.helm:
+    name: cilium
+    chart_ref: cilium/cilium
+    chart_version: "{{ cilium_chart_version }}"
+    release_namespace: "{{ cilium_namespace }}"
+    create_namespace: true
+    state: present
+    kubeconfig: /etc/kubernetes/admin.conf
+    update_repo_cache: yes
+    values:
+      kubeProxyReplacement: true
+      k8sServiceHost: "{{ cilium_k8s_service_host }}"
+      k8sServicePort: "{{ cilium_k8s_service_port }}"
+      ipam:
+        mode: "{{ cilium_ipam_mode }}"
+        operator:
+          clusterPoolIPv4PodCIDRList: ["{{ pod_network_cidr }}"]
+          clusterPoolIPv4MaskSize: 24
+      l2announcements:
+        enabled: true
+      gatewayAPI:
+        enabled: true
+
+- name: Wait for Cilium Operator to be ready
+  kubernetes.core.k8s_info:
+    kind: Deployment
+    name: cilium-operator
+    namespace: "{{ cilium_namespace }}"
+    kubeconfig: /etc/kubernetes/admin.conf
+  register: cilium_operator_info
+  retries: 30
+  delay: 10
+  until:
+    - cilium_operator_info.resources is defined
+    - cilium_operator_info.resources | length > 0
+    - cilium_operator_info.resources[0].status.readyReplicas is defined
+    - (cilium_operator_info.resources[0].status.readyReplicas | default(0) | int) > 0
+
+- name: Wait for Cilium DaemonSet (Node Agents) to be ready
+  become: true
+  kubernetes.core.k8s_info:
+    kind: DaemonSet
+    name: cilium
+    namespace: "{{ cilium_namespace }}"
+    kubeconfig: /etc/kubernetes/admin.conf
+  register: cilium_ds_info
+  retries: 30
+  delay: 10
+  until:
+    - cilium_ds_info.resources is defined
+    - cilium_ds_info.resources | length > 0
+    - cilium_ds_info.resources[0].status.numberReady is defined
+    - cilium_ds_info.resources[0].status.desiredNumberScheduled is defined
+    - (cilium_ds_info.resources[0].status.numberReady | default(0) | int) == (cilium_ds_info.resources[0].status.desiredNumberScheduled | default(0) | int)
+    - (cilium_ds_info.resources[0].status.numberReady | default(0) | int) > 0
+
+- name: Template loadbalancerippool l2announcements manifest
+  template:
+    src: loadbalancerippool_l2announcementpolicy.yml.j2
+    dest: /root/loadbalancerippool_l2announcementpolicy.yml
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Apply LoadBalancerIPPool and L2AnnouncementPolicy
+  kubernetes.core.k8s:
+    state: present
+    src: /root/loadbalancerippool_l2announcementpolicy.yml
+    kubeconfig: /etc/kubernetes/admin.conf

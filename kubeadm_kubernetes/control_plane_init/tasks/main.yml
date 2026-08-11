@@ -1,0 +1,67 @@
+---
+- name: Check if Kubernetes is already initialized
+  stat:
+    path: /etc/kubernetes/admin.conf
+  register: k8s_admin_conf
+
+- name: Create kubernetes config directory
+  file:
+    path: /etc/kubernetes
+    state: directory
+    mode: "0755"
+  when: not k8s_admin_conf.stat.exists
+
+- name: Template kubeadm init configuration
+  template:
+    src: init.yml.j2
+    dest: /root/kubeadm-init.yml
+    owner: root
+    group: root
+    mode: "0644"
+  when: not k8s_admin_conf.stat.exists
+
+- name: Initialize Kubernetes cluster
+  command: >
+    kubeadm init 
+    --config=/root/kubeadm-init.yml 
+    --upload-certs 
+    {{ '--skip-phases=addon/kube-proxy' if cni_plugin == 'cilium' else '' }}
+  register: kubeadm_init_output
+  args:
+    creates: /etc/kubernetes/admin.conf
+  when: not k8s_admin_conf.stat.exists
+
+- name: Extract worker join command
+  command: kubeadm token create --print-join-command
+  register: worker_join_command
+
+- name: Extract control plane certificate key
+  command: kubeadm init phase upload-certs --upload-certs
+  register: cert_key_output
+
+- name: Set join commands as dummy host facts for other roles
+  add_host:
+    name: "K8S_TOKEN_HOLDER"
+    worker_cmd: "{{ worker_join_command.stdout }}"
+    cp_cmd: "{{ worker_join_command.stdout }} --control-plane --certificate-key {{ cert_key_output.stdout_lines[-1] }}"
+
+- name: Ensure .kube directory exists for root user
+  file:
+    path: /root/.kube
+    state: directory
+    mode: "0755"
+
+- name: Copy admin.conf to root's kube config
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /root/.kube/config
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Fetch super-admin.conf to the Ansible controller
+  fetch:
+    src: /etc/kubernetes/super-admin.conf
+    dest: /tmp/k8s-super-admin.conf
+    flat: true

@@ -1,0 +1,16 @@
+---
+- name: Add Kyverno Helm repository
+  kubernetes.core.helm_repository:
+    name: kyverno
+    repo_url: https://kyverno.github.io/kyverno/
+
+- name: Deploy Kyverno via Helm
+  kubernetes.core.helm:
+    name: kyverno
+    chart_ref: kyverno/kyverno
+    chart_version: "{{ kyverno_version }}"
+    release_namespace: "{{ kyverno_namespace }}"
+    create_namespace: true
+    state: present
+    kubeconfig: /etc/kubernetes/admin.conf
+    update_repo_cache: yes

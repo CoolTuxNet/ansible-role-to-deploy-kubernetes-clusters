@@ -1,0 +1,47 @@
+---
+- name: Setup Prerequisites To Install rke2 Kubernetes
+  tags:
+    - setup-prerequisites
+  block:
+    - name: Disable swap immediately
+      command: swapoff -a
+      when: (ansible_facts['memory_mb']['swap']['total'] | default(0)) > 0
+
+    - name: Disable swap permanently in /etc/fstab
+      replace:
+        path: /etc/fstab
+        regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
+        replace: '# \1'
+
+    - name: Enable IPv4 forwarding
+      sysctl:
+        name: net.ipv4.ip_forward
+        value: "1"
+        state: present
+        reload: yes
+
+    - name: Create RKE2 config directory
+      file:
+        path: /etc/rancher/rke2
+        state: directory
+        mode: "0755"
+
+    - name: 10.1 Update Cache
+      ansible.builtin.apt:
+        update_cache: true
+        autoclean: true
+      tags:
+        - install_pre_kube_packages
+
+    - name: 10.2 Remove apt lock file
+      ansible.builtin.file:
+        state: absent
+        path: "/var/lib/dpkg/lock"
+      tags:
+        - install_pre_kube_packages
+
+    - name: 10.3 Install Prerequisite Packages
+      ansible.builtin.apt:
+        name: "{{ kube_prereq_packages }}"
+      tags:
+        - install_pre_kube_packages

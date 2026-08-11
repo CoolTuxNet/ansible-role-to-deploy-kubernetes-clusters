@@ -1,0 +1,12 @@
+token: "{{ rke2_token_secret }}"
+tls-san:
+  - "{{ kube_vip_address }}"
+node-taint:
+  - "node-role.kubernetes.io/control-plane=true:NoSchedule"
+cni: "{{ cni_plugin }}"
+{% if cni_plugin == 'cilium' %}
+disable-kube-proxy: true
+{% endif %}
+disable:
+  - rke2-ingress-nginx
+disable-cloud-controller: true

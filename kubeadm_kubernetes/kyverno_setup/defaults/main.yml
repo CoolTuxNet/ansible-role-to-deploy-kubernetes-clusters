@@ -1,0 +1,4 @@
+---
+# Die gewünschte Kyverno Chart-Version
+kyverno_version: "3.8.1"
+kyverno_namespace: "kyverno"

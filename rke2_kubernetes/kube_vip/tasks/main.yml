@@ -1,0 +1,12 @@
+---
+- name: Create agent manifests directory
+  file:
+    path: /var/lib/rancher/rke2/agent/pod-manifests
+    state: directory
+    mode: "0755"
+
+- name: Deploy kube-vip manifest
+  template:
+    src: kube-vip.yaml.j2
+    dest: /var/lib/rancher/rke2/agent/pod-manifests/kube-vip.yaml
+    mode: "0644"

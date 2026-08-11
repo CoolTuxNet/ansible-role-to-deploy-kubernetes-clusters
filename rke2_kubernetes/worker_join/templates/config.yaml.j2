@@ -1,0 +1,5 @@
+server: https://{{ kube_vip_address }}:9345
+token: "{{ rke2_token_secret }}"
+{% if cni_plugin == 'cilium' %}
+disable-kube-proxy: true
+{% endif %}

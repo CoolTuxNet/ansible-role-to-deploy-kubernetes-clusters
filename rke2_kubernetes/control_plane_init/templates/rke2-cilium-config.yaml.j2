@@ -1,0 +1,19 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: rke2-cilium
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    kubeProxyReplacement: true
+    k8sServiceHost: "{{ cilium_k8s_service_host }}"
+    k8sServicePort: "{{ cilium_k8s_service_port }}"
+    ipam:
+      mode: "{{ cilium_ipam_mode }}"
+      operator:
+        clusterPoolIPv4PodCIDRList: ["{{ pod_network_cidr }}"]
+        clusterPoolIPv4MaskSize: 24
+    l2announcements:
+      enabled: true
+    gatewayAPI:
+      enabled: true
