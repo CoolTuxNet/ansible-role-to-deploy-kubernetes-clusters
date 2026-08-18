@@ -5,7 +5,7 @@
   tags:
     - prepare_all_nodes
   roles:
-    - ../roles/kubeadm_kubernetes/k8s_common
+    - ../kubeadm_kubernetes/k8s_common
 
 - name: Setup HA Virtual IP via Kube-VIP
   hosts: control_planes
@@ -13,7 +13,7 @@
   tags:
     - kube_vip
   roles:
-    - ../roles/kubeadm_kubernetes/kube_vip
+    - ../kubeadm_kubernetes/kube_vip
 
 - name: Initialize the first control plane
   hosts: control_planes[0]
@@ -21,7 +21,7 @@
   tags:
     - control_plane_init
   roles:
-    - ../roles/kubeadm_kubernetes/control_plane_init
+    - ../kubeadm_kubernetes/control_plane_init
 
 - name: Join additional control planes
   hosts: control_planes[1:]
@@ -29,7 +29,7 @@
   tags:
     - control_plane_join
   roles:
-    - ../roles/kubeadm_kubernetes/control_plane_join
+    - ../kubeadm_kubernetes/control_plane_join
 
 - name: Join worker nodes
   hosts: workers
@@ -37,7 +37,7 @@
   tags:
     - worker_join
   roles:
-    - ../roles/kubeadm_kubernetes/worker_join
+    - ../kubeadm_kubernetes/worker_join
 
 - name: Install Network Plugin (CNI)
   hosts: control_planes[0]
@@ -45,10 +45,10 @@
   tags:
     - cni_plugin
   roles:
-    - role: ../roles/kubeadm_kubernetes/calico_setup
+    - role: ../kubeadm_kubernetes/calico_setup
       when: cni_plugin == 'calico'
 
-    - role: ../roles/kubeadm_kubernetes/cilium_setup
+    - role: ../kubeadm_kubernetes/cilium_setup
       when: cni_plugin == 'cilium' # Replaces Kube-Proxy
 
 - name: Install Metrics Server
@@ -57,7 +57,7 @@
   tags:
     - metrics_server
   roles:
-    - ../roles/kubeadm_kubernetes/metrics_server
+    - ../kubeadm_kubernetes/metrics_server
 
 - name: Install Kyverno Policy Engine (Helm)
   hosts: control_planes[0]
@@ -65,4 +65,4 @@
   tags:
     - kyverno
   roles:
-    - ../roles/kubeadm_kubernetes/kyverno_setup
+    - ../kubeadm_kubernetes/kyverno_setup
