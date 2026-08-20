@@ -8,8 +8,6 @@ service_network_cidr: "100.74.0.0/16"
 kube_vip_version: "1.2.2"
 kube_vip_address: "10.6.8.210"
 kube_vip_interface: "eth0"
-# Der k8s Endpoint zeigt nun direkt auf die VIP
-control_plane_endpoint: "{{ kube_vip_address | default('10.6.8.210') }}:6443"
 
 ## Konfiguration des Netzwerkplugins (unterstützt: calico, cilium, canal)
 cni_plugin: "cilium" # Entweder "cilium" oder "calico"
@@ -24,13 +22,3 @@ cilium_namespace: "cilium-system"
 cilium_k8s_service_host: "{{kube_vip_address}}"
 cilium_k8s_service_port: "6443"
 cilium_ipam_mode: "cluster-pool" # "kubernetes"
-
-## rke2
-ansible_environment: production
-
-rke2_version: "v1.35.7+rke2r1"
-rke2_token_secret: "a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9"
-
-## kubeadm
-k8s_major_version: "1.35"
-k8s_version: "1.35.7"

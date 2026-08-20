@@ -1,0 +1,8 @@
+---
+# Kubernetes
+ansible_environment: production
+k8s_major_version: "1.35"
+k8s_version: "1.35.7"
+
+# Der k8s Endpoint zeigt nun direkt auf die VIP
+control_plane_endpoint: "{{ kube_vip_address | default('10.6.8.210') }}:6443"
