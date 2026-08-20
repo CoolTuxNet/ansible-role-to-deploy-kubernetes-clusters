@@ -7,30 +7,30 @@ all:
             control_planes:
               hosts:
                 cp1:
-                  ansible_host: 192.168.0.20
+                  ansible_host: 10.6.8.220
                 cp2:
-                  ansible_host: 192.168.0.21 # Optionaler 2. Master
+                  ansible_host: 10.6.8.221 # Optionaler 2. Master
                 cp3:
-                  ansible_host: 192.168.0.22 # Optionaler 3. Master
+                  ansible_host: 10.6.8.222 # Optionaler 3. Master
             workers:
               hosts:
                 worker1:
-                  ansible_host: 192.168.0.30
+                  ansible_host: 10.6.8.230
                 worker2:
-                  ansible_host: 192.168.0.31
+                  ansible_host: 10.6.8.231
         rke2_cluster:
           children:
             rke2_servers:
               hosts:
                 rke2-server-1:
-                  ansible_host: 192.168.0.20
+                  ansible_host: 10.6.8.220
                 rke2-server-2:
-                  ansible_host: 192.168.0.21 # Optionaler 2. Master
+                  ansible_host: 10.6.8.221
                 rke2-server-3:
-                  ansible_host: 192.168.0.22 # Optionaler 3. Master
+                  ansible_host: 10.6.8.222
             rke2_agents:
               hosts:
                 rke2-worker-1:
-                  ansible_host: 192.168.0.30
+                  ansible_host: 10.6.8.230
                 rke2-worker-2:
-                  ansible_host: 192.168.0.31
+                  ansible_host: 10.6.8.231
