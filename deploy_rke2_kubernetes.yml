@@ -5,7 +5,7 @@
   tags:
     - prepare_all_nodes
   roles:
-    - ../roles/rke2_kubernetes/rke2_common
+    - roles/rke2_kubernetes/rke2_common
 
 - name: Setup HA Virtual IP via Kube-VIP
   hosts: rke2_servers
@@ -13,7 +13,7 @@
   tags:
     - kube_vip
   roles:
-    - ../roles/rke2_kubernetes/kube_vip
+    - roles/rke2_kubernetes/kube_vip
 
 - name: Initialize first control plane node
   hosts: rke2_servers[0]
@@ -21,7 +21,7 @@
   tags:
     - control_plane_init
   roles:
-    - ../roles/rke2_kubernetes/control_plane_init
+    - roles/rke2_kubernetes/control_plane_init
 
 - name: Join additional control plane nodes
   hosts: rke2_servers[1:]
@@ -29,7 +29,7 @@
   tags:
     - control_plane_join
   roles:
-    - ../roles/rke2_kubernetes/control_plane_join
+    - roles/rke2_kubernetes/control_plane_join
 
 - name: Join worker nodes
   hosts: rke2_agents
@@ -37,4 +37,4 @@
   tags:
     - worker_join
   roles:
-    - ../roles/rke2_kubernetes/worker_join
+    - roles/rke2_kubernetes/worker_join

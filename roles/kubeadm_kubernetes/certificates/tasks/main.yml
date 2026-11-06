@@ -1,0 +1,22 @@
+---
+- name: Sleep for 5 seconds and continue with play
+  ansible.builtin.wait_for:
+    timeout: 5
+
+- name: Retrieve pending kubelet CSRs
+  kubernetes.core.k8s_info:
+    kubeconfig: /etc/kubernetes/admin.conf
+    api_version: certificates.k8s.io/v1
+    kind: CertificateSigningRequest
+  register: k8s_csrs
+
+- name: Approve pending kubelet certificates
+  ansible.builtin.command:
+    cmd: "kubectl --kubeconfig=/etc/kubernetes/admin.conf certificate approve {{ item.metadata.name }}"
+  loop: "{{ k8s_csrs.resources | default([]) }}"
+  loop_control:
+    label: "{{ item.metadata.name }}"
+  when:
+    - item.status.conditions is not defined or (item.status.conditions | selectattr('type', 'equalto', 'Approved') | list | length == 0)
+    - item.spec.signerName in ['kubernetes.io/kube-apiserver-client-kubelet', 'kubernetes.io/kubelet-serving']
+  changed_when: true

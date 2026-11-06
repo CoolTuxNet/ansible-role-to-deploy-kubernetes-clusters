@@ -6,7 +6,9 @@ metadata:
   namespace: {{ cilium_namespace }}
 spec:
   blocks:
-    - cidr: "{{ gateway_ippool_cdr }}"
+{% for cidr_address in gateway_ippool_cidrs %}
+    - cidr: "{{ cidr_address }}"
+{% endfor %}
 ---
 apiVersion: "cilium.io/v2alpha1"
 kind: CiliumL2AnnouncementPolicy

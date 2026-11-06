@@ -1,4 +1,7 @@
 ---
 # rke2
-rke2_version: "v1.35.7+rke2r1"
-rke2_token_secret: "a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9"
+ansible_environment: production
+
+rke2_version: "v1.36.5+rke2r1"
+rke2_token_secret: "CHANGEME"
+rke2_controlplane_node_taint: true

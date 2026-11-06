@@ -1,24 +1,25 @@
 ---
-### Kubernetes k8s oder rke2
 ## Netzwerk-Plugin
 pod_network_cidr: "100.73.0.0/16"
 service_network_cidr: "100.74.0.0/16"
 
 ## Kube-VIP HA Konfiguration
-kube_vip_version: "1.2.3"
-kube_vip_address: "10.6.8.210"
+kube_vip_version: "1.3.1"
+kube_vip_address: "192.168.42.10"
 kube_vip_interface: "eth0"
 
 ## Konfiguration des Netzwerkplugins (unterstützt: calico, cilium, canal)
 cni_plugin: "cilium" # Entweder "cilium" oder "calico"
 
 ## Gateway-API
-gateway_api_version: "1.6.1"
-gateway_ippool_cdr: "10.6.8.240/32"
+gateway_api_version: "1.6.3"
+gateway_ippool_cidrs:
+  - "192.168.42.40/32"
+#  - "192.168.42.41/32"
+#  - "192.168.42.42/32"
 
 ## Cilium
-cilium_chart_version: "1.20.0"
 cilium_namespace: "cilium-system"
-cilium_k8s_service_host: "{{kube_vip_address}}"
+cilium_k8s_service_host: "{{ kube_vip_address }}"
 cilium_k8s_service_port: "6443"
 cilium_ipam_mode: "cluster-pool" # "kubernetes"

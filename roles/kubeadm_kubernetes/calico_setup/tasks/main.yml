@@ -1,46 +1,52 @@
 ---
-- name: Apply Tigera Operator for Calico
+- name: Apply Calico CNI Plugin
   kubernetes.core.k8s:
     state: present
-    src: https://raw.githubusercontent.com/projectcalico/calico/v{{ calico_version }}/manifests/tigera-operator.yaml
+    src: https://raw.githubusercontent.com/projectcalico/calico/v{{ calico_version }}/manifests/calico.yaml
     kubeconfig: /etc/kubernetes/admin.conf
 
-- name: Wait for Tigera / Calico Operator to be ready
-  kubernetes.core.k8s_info:
-    kind: Deployment
-    name: tigera-operator
-    namespace: tigera-operator
-    kubeconfig: /etc/kubernetes/admin.conf
-  register: tigera_operator_info
-  retries: 30
-  delay: 10
-  until:
-    - tigera_operator_info.resources is defined
-    - tigera_operator_info.resources | length > 0
-    - tigera_operator_info.resources[0].status.readyReplicas is defined
-    - (tigera_operator_info.resources[0].status.readyReplicas | default(0) | int) > 0
+# - name: Apply Tigera Operator for Calico
+#   kubernetes.core.k8s:
+#     state: present
+#     src: https://raw.githubusercontent.com/projectcalico/calico/v{{ calico_version }}/manifests/tigera-operator.yaml
+#     kubeconfig: /etc/kubernetes/admin.conf
 
-- name: Template Calico custom resources
-  template:
-    src: custom-resources.yml.j2
-    dest: /root/calico-custom-resources.yml
-    owner: root
-    group: root
-    mode: "0644"
+# - name: Wait for Tigera / Calico Operator to be ready
+#   kubernetes.core.k8s_info:
+#     kind: Deployment
+#     name: tigera-operator
+#     namespace: tigera-operator
+#     kubeconfig: /etc/kubernetes/admin.conf
+#   register: tigera_operator_info
+#   retries: 30
+#   delay: 10
+#   until:
+#     - tigera_operator_info.resources is defined
+#     - tigera_operator_info.resources | length > 0
+#     - tigera_operator_info.resources[0].status.readyReplicas is defined
+#     - (tigera_operator_info.resources[0].status.readyReplicas | default(0) | int) > 0
 
-- name: Apply Calico custom resources (Installation)s
-  kubernetes.core.k8s:
-    state: present
-    src: /root/calico-custom-resources.yml
-    kubeconfig: /etc/kubernetes/admin.conf
+# - name: Template Calico custom resources
+#   template:
+#     src: custom-resources.yml.j2
+#     dest: /root/calico-custom-resources.yml
+#     owner: root
+#     group: root
+#     mode: "0644"
 
-- name: Wait for Calico API server to be ready
-  kubernetes.core.k8s_info:
-    kind: APIServer
-    api_version: operator.tigera.io/v1
-    name: default
-    kubeconfig: /etc/kubernetes/admin.conf
-  register: calico_api
-  retries: 12
-  delay: 10
-  until: calico_api.resources | length > 0
+# - name: Apply Calico custom resources (Installation)s
+#   kubernetes.core.k8s:
+#     state: present
+#     src: /root/calico-custom-resources.yml
+#     kubeconfig: /etc/kubernetes/admin.conf
+
+# - name: Wait for Calico API server to be ready
+#   kubernetes.core.k8s_info:
+#     kind: APIServer
+#     api_version: operator.tigera.io/v1
+#     name: default
+#     kubeconfig: /etc/kubernetes/admin.conf
+#   register: calico_api
+#   retries: 12
+#   delay: 10
+#   until: calico_api.resources | length > 0

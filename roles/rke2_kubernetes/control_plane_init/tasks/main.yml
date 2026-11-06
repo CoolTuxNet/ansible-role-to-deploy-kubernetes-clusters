@@ -44,6 +44,12 @@
 
 - name: Configuration Cilium CNI
   block:
+    - name: Apply Gateway-API Version {{ gateway_api_version }}
+      kubernetes.core.k8s:
+        state: present
+        src: https://github.com/kubernetes-sigs/gateway-api/releases/download/{{ gateway_api_version }}/experimental-install.yaml
+        kubeconfig: /etc/rancher/rke2/rke2.yaml
+
     - name: Wait for Cilium Operator to be ready
       kubernetes.core.k8s_info:
         kind: Deployment
